@@ -48,7 +48,10 @@ test('uses Jev probabilities to retain calls and full results independently', as
         { noul: name === 'call_t1' ? 0.9 : name === 'result_t1' ? 0.2 : 0.1 },
       ]),
     );
-    return new Response(JSON.stringify({ answers }), { status: 200 });
+    return new Response(
+      JSON.stringify({ answers, model: 'jev-test', usage: { input_tokens: 321, output_tokens: 12 } }),
+      { status: 200 },
+    );
   };
   const selected = await selectToolEvidence(parsed.messages, {
     apiKey: 'test-key',
@@ -70,6 +73,7 @@ test('uses Jev probabilities to retain calls and full results independently', as
   assert.equal(selected.selections.length, 1);
   assert.equal(selected.selections[0].call.id, 't1');
   assert.equal(selected.selections[0].keepResult, false);
+  assert.deepEqual(selected.usage, { inputTokens: 321, outputTokens: 12 });
 });
 
 test('redacts common secret forms from checkpoints', () => {
@@ -130,4 +134,9 @@ test('pre-compact and session-start hooks round-trip a checkpoint', async () => 
   assert.equal(output.hookSpecificOutput.hookEventName, 'SessionStart');
   assert.match(output.hookSpecificOutput.additionalContext, /exec_command/);
   assert.match(output.hookSpecificOutput.additionalContext, /apply_patch/);
+  const history = JSON.parse(
+    await readFile(join(temporary, 'data', 'usage.jsonl'), 'utf8'),
+  );
+  assert.equal(history.mode, 'fallback-no-key');
+  assert.equal(history.totalTokens, 0);
 });

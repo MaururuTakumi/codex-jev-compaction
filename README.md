@@ -64,6 +64,14 @@ Run the local diagnostic without revealing the key:
 node /path/to/plugin/scripts/codex-jev-compaction.mjs doctor
 ```
 
+Inspect the latest compaction runs and Jev token usage:
+
+```bash
+node /path/to/plugin/scripts/codex-jev-compaction.mjs history
+```
+
+The local `usage.jsonl` history contains timestamps, mode, request and token counts, retained call counts, and checkpoint size. It never stores the API key, prompts, tool inputs, or tool results.
+
 ## Privacy and limits
 
 - Jev receives a compact history containing user/assistant text, tool names, and tool inputs. Tool results are omitted from the Jev request; only their status and character counts are included.

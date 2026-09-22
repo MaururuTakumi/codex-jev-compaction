@@ -2,7 +2,7 @@
 
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { chmod, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
+import { appendFile, chmod, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -332,7 +332,14 @@ async function askJev(state, questions, apiKey, config, fetchImpl = fetch) {
     if (!parsed?.answers || typeof parsed.answers !== 'object') {
       throw new Error('Jev response is missing answers');
     }
-    return parsed.answers;
+    return {
+      answers: parsed.answers,
+      model: typeof parsed.model === 'string' ? parsed.model : config.model,
+      usage: {
+        inputTokens: finiteNumber(parsed.usage?.input_tokens, 0),
+        outputTokens: finiteNumber(parsed.usage?.output_tokens, 0),
+      },
+    };
   } finally {
     clearTimeout(timer);
   }
@@ -351,7 +358,15 @@ export async function selectToolEvidence(
   { config = resolveConfig(), apiKey = '', fetchImpl = fetch } = {},
 ) {
   const calls = collectToolCalls(messages, config.preserveRecentMessages);
-  if (!calls.length) return { selections: [], mode: 'empty', calls: 0, requests: 0 };
+  if (!calls.length) {
+    return {
+      selections: [],
+      mode: 'empty',
+      calls: 0,
+      requests: 0,
+      usage: { inputTokens: 0, outputTokens: 0 },
+    };
+  }
   if (!apiKey) {
     const selectedIds = new Set(
       calls
@@ -366,16 +381,21 @@ export async function selectToolEvidence(
       mode: 'fallback-no-key',
       calls: calls.length,
       requests: 0,
+      usage: { inputTokens: 0, outputTokens: 0 },
     };
   }
 
   const candidates = calls.filter((call) => !call.pinned);
   const answers = {};
   let requests = 0;
+  const usage = { inputTokens: 0, outputTokens: 0 };
   const state = buildState(messages, calls, config);
   for (let index = 0; index < candidates.length; index += 24) {
     const batch = candidates.slice(index, index + 24);
-    Object.assign(answers, await askJev(state, questionsFor(batch), apiKey, config, fetchImpl));
+    const response = await askJev(state, questionsFor(batch), apiKey, config, fetchImpl);
+    Object.assign(answers, response.answers);
+    usage.inputTokens += response.usage.inputTokens;
+    usage.outputTokens += response.usage.outputTokens;
     requests += 1;
   }
   const selections = [];
@@ -392,7 +412,7 @@ export async function selectToolEvidence(
       selections.push({ call, keepResult: false, score: keepCall });
     }
   }
-  return { selections, mode: 'jev', calls: calls.length, requests };
+  return { selections, mode: 'jev', calls: calls.length, requests, usage };
 }
 
 function renderSelection(selection, config) {
@@ -453,12 +473,41 @@ function checkpointPath(event) {
   return join(dataDirectory(), 'sessions', sessionKey(event), 'checkpoint.json');
 }
 
-async function atomicWriteJson(path, value) {
+function usageHistoryPath() {
+  return join(dataDirectory(), 'usage.jsonl');
+}
+
+async function atomicWriteText(path, text) {
   await mkdir(dirname(path), { recursive: true, mode: 0o700 });
   const temporary = `${path}.${process.pid}.tmp`;
-  await writeFile(temporary, `${JSON.stringify(value)}\n`, { mode: 0o600 });
+  await writeFile(temporary, text, { mode: 0o600 });
   await rename(temporary, path);
   await chmod(path, 0o600);
+}
+
+async function atomicWriteJson(path, value) {
+  await atomicWriteText(path, `${JSON.stringify(value)}\n`);
+}
+
+async function appendUsageRecord(record) {
+  const path = usageHistoryPath();
+  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  await appendFile(path, `${JSON.stringify(record)}\n`, { mode: 0o600 });
+  await chmod(path, 0o600);
+  const historyStat = await stat(path);
+  if (historyStat.size <= 1024 * 1024) return;
+  const lines = (await readFile(path, 'utf8')).trim().split('\n').slice(-500);
+  await atomicWriteText(path, `${lines.join('\n')}\n`);
+}
+
+async function readUsageHistory(limit = 20) {
+  try {
+    const lines = (await readFile(usageHistoryPath(), 'utf8')).trim().split('\n').filter(Boolean);
+    return lines.slice(-limit).map((line) => JSON.parse(line));
+  } catch (error) {
+    if (error?.code === 'ENOENT') return [];
+    throw error;
+  }
 }
 
 async function readStdin() {
@@ -502,10 +551,26 @@ export async function createCheckpoint(event, dependencies = {}) {
       calls: selection.calls,
       retained: selection.selections.length,
       requests: selection.requests,
+      inputTokens: selection.usage?.inputTokens || 0,
+      outputTokens: selection.usage?.outputTokens || 0,
+      totalTokens: (selection.usage?.inputTokens || 0) + (selection.usage?.outputTokens || 0),
       warning: selection.warning ? redactSecrets(selection.warning) : undefined,
     },
   };
   await atomicWriteJson(checkpointPath(event), record);
+  await appendUsageRecord({
+    timestamp: record.createdAt,
+    sessionId: record.sessionId,
+    trigger: event.trigger || 'unknown',
+    mode: record.stats.mode,
+    requests: record.stats.requests,
+    inputTokens: record.stats.inputTokens,
+    outputTokens: record.stats.outputTokens,
+    totalTokens: record.stats.totalTokens,
+    calls: record.stats.calls,
+    retained: record.stats.retained,
+    checkpointChars: checkpoint.length,
+  });
   return record;
 }
 
@@ -529,6 +594,8 @@ async function doctor() {
     node: process.version,
     configPath: configPath(),
     dataDirectory: dataDirectory(),
+    usageHistoryPath: usageHistoryPath(),
+    usageRecords: (await readUsageHistory()).length,
     credentials: key ? 'configured' : 'missing (deterministic fallback active)',
     model: config.model,
     baseUrl: config.baseUrl,
@@ -539,6 +606,10 @@ async function main() {
   const command = process.argv[2];
   if (command === 'doctor') {
     process.stdout.write(`${JSON.stringify(await doctor(), null, 2)}\n`);
+    return;
+  }
+  if (command === 'history') {
+    process.stdout.write(`${JSON.stringify(await readUsageHistory(), null, 2)}\n`);
     return;
   }
   let event;
