@@ -1,6 +1,6 @@
 {
   "name": "codex-jev-compaction",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Preserve high-value tool evidence across Codex compaction with TypeSafe Jev.",
   "author": {
     "name": "MaururuTakumi",

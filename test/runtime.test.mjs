@@ -38,6 +38,33 @@ test('parses Codex response items and pairs tool calls', async () => {
   assert.equal(calls[0].result, 'checkout.test.ts failed: expected 201, received 500');
 });
 
+test('parses custom tool calls emitted by Codex CLI', () => {
+  const parsed = parseTranscriptJsonl([
+    JSON.stringify({
+      type: 'response_item',
+      payload: {
+        type: 'custom_tool_call',
+        name: 'exec',
+        input: '{"cmd":"pwd"}',
+        call_id: 'call-custom-1',
+      },
+    }),
+    JSON.stringify({
+      type: 'response_item',
+      payload: {
+        type: 'custom_tool_call_output',
+        call_id: 'call-custom-1',
+        output: '/tmp/project',
+      },
+    }),
+  ].join('\n'));
+  const calls = collectToolCalls(parsed.messages, 0);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].tool, 'exec');
+  assert.deepEqual(calls[0].input, { cmd: 'pwd' });
+  assert.equal(calls[0].result, '/tmp/project');
+});
+
 test('uses Jev probabilities to retain calls and full results independently', async () => {
   const parsed = parseTranscriptJsonl(await readFile(fixturePath, 'utf8'));
   const fetchImpl = async (_url, request) => {

@@ -71,6 +71,7 @@ node /path/to/plugin/scripts/codex-jev-compaction.mjs history
 ```
 
 The local `usage.jsonl` history contains timestamps, mode, request and token counts, retained call counts, and checkpoint size. It never stores the API key, prompts, tool inputs, or tool results.
+Outside a hook, the command reads Codex's standard plugin data directory automatically.
 
 ## Privacy and limits
 

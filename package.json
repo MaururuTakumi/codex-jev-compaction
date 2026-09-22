@@ -1,6 +1,6 @@
 {
   "name": "codex-jev-compaction",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Codex plugin that restores Jev-selected tool evidence after context compaction.",
   "type": "module",

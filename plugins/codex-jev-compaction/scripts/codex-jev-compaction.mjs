@@ -164,7 +164,7 @@ export function parseTranscriptJsonl(jsonl) {
       });
       continue;
     }
-    if (payload.type === 'function_call') {
+    if (payload.type === 'function_call' || payload.type === 'custom_tool_call') {
       const toolUseId = String(payload.call_id || payload.id || `call-${messages.length + 1}`);
       messages.push({
         role: 'assistant',
@@ -173,14 +173,14 @@ export function parseTranscriptJsonl(jsonl) {
           {
             tool_use_id: toolUseId,
             tool: String(payload.name || 'unknown_tool'),
-            input: parseArguments(payload.arguments),
+            input: parseArguments(payload.arguments ?? payload.input),
           },
         ],
         toolResults: [],
       });
       continue;
     }
-    if (payload.type === 'function_call_output') {
+    if (payload.type === 'function_call_output' || payload.type === 'custom_tool_call_output') {
       const toolUseId = String(payload.call_id || payload.id || `result-${messages.length + 1}`);
       messages.push({
         role: 'user',
@@ -459,7 +459,12 @@ function dataDirectory() {
   return (
     process.env.PLUGIN_DATA ||
     process.env.CLAUDE_PLUGIN_DATA ||
-    join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'plugin-data', 'codex-jev-compaction')
+    join(
+      process.env.CODEX_HOME || join(homedir(), '.codex'),
+      'plugins',
+      'data',
+      'codex-jev-compaction-codex-jev-compaction',
+    )
   );
 }
 
