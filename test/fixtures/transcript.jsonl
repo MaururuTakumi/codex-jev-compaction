@@ -1,0 +1,7 @@
+{"type":"session_meta","payload":{"id":"test-session"}}
+{"type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Fix the failing checkout test without changing its API."}]}}
+{"type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"npm test\",\"token\":\"secret-value\"}","call_id":"call-1"}}
+{"type":"response_item","payload":{"type":"function_call_output","call_id":"call-1","output":"checkout.test.ts failed: expected 201, received 500"}}
+{"type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"I found the failing assertion."}]}}
+{"type":"response_item","payload":{"type":"function_call","name":"apply_patch","arguments":"{\"patch\":\"Update checkout error mapping\"}","call_id":"call-2"}}
+{"type":"response_item","payload":{"type":"function_call_output","call_id":"call-2","output":"Done!"}}

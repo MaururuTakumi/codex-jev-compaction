@@ -1,0 +1,26 @@
+{
+  "name": "codex-jev-compaction",
+  "version": "0.1.0",
+  "description": "Preserve high-value tool evidence across Codex compaction with TypeSafe Jev.",
+  "author": {
+    "name": "MaururuTakumi",
+    "url": "https://github.com/MaururuTakumi"
+  },
+  "homepage": "https://github.com/MaururuTakumi/codex-jev-compaction#readme",
+  "repository": "https://github.com/MaururuTakumi/codex-jev-compaction",
+  "license": "MIT",
+  "keywords": ["codex", "compaction", "jev", "typesafe", "hooks"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Jev Compaction",
+    "shortDescription": "Restore valuable tool evidence after compaction.",
+    "longDescription": "Uses TypeSafe Jev before Codex compaction to select high-value tool calls and results, then restores a bounded checkpoint immediately after compaction.",
+    "developerName": "MaururuTakumi",
+    "category": "Productivity",
+    "capabilities": ["Hooks", "Context management"],
+    "websiteURL": "https://github.com/MaururuTakumi/codex-jev-compaction",
+    "defaultPrompt": [
+      "Check whether Codex Jev Compaction is configured correctly."
+    ]
+  }
+}

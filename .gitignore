@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+coverage/
+*.log
+.env
+
+# codex-project local private memory
+.local/

@@ -1,0 +1,7 @@
+{
+  "apiKeyCommand": ["security", "find-generic-password", "-w", "-s", "typesafe-jev"],
+  "keepThreshold": 0.5,
+  "preserveRecentMessages": 6,
+  "fallbackToolCalls": 12,
+  "maxCheckpointChars": 9000
+}

@@ -1,0 +1,16 @@
+{
+  "name": "codex-jev-compaction",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Codex plugin that restores Jev-selected tool evidence after context compaction.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node --check plugins/codex-jev-compaction/scripts/codex-jev-compaction.mjs",
+    "test": "node --test",
+    "validate": "npm run check && npm test"
+  }
+}

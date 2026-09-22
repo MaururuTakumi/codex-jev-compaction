@@ -1,0 +1,9 @@
+Codex Jev Compaction is inspired by fast-jev-compaction by Tamara Tran:
+https://github.com/tamaratran/fast-jev-compaction
+
+Design and selection semantics were studied from commit
+e3f262a7f4d42bd8dd32ced30d26176f7cb545b0, licensed under the MIT License.
+
+This project is an independent Codex hook implementation. It does not copy or
+modify Codex transcripts; it creates a separate, bounded checkpoint before
+Codex compaction and provides that checkpoint as additional context afterward.
